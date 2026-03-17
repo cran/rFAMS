@@ -2,9 +2,12 @@
 % Please edit documentation in R/MakeLH.R
 \name{makeLH}
 \alias{makeLH}
+\alias{print.MAKELH}
 \title{Make a list or vector of life history parameters for yield-per-recruit analyses.}
 \usage{
 makeLH(N0, tmax, Linf, K, t0, LWalpha, LWbeta, restype = c("list", "vector"))
+
+\method{print}{MAKELH}(x, ...)
 }
 \arguments{
 \item{N0}{A single numeric that represents the number of fish in the population at the hypothetical age of \code{t0}.}
@@ -22,6 +25,10 @@ makeLH(N0, tmax, Linf, K, t0, LWalpha, LWbeta, restype = c("list", "vector"))
 \item{LWbeta}{A single numeric that represents the point estimate of beta from the length-weight regression on the log10 scale.}
 
 \item{restype}{A character that indicates the type of output (list or vector) returned by the function.}
+
+\item{x}{An object created by \code{makeLH}.}
+
+\item{\dots}{Optional arguments to be passed to \code{print}.}
 }
 \value{
 A named list or vector (depending on \code{restype}) that contains the given (or extracted) life history parameters values that can be used directly in the yield-per-recruit calculation functions (e.g., \code{\link{yprBH_SlotLL}}).
@@ -31,42 +38,6 @@ Efficiently construct either a vector or list that contains the seven life histo
 }
 \details{
 Use of this function for putting life history parameters into a list or vector is recommended as (i) values for \code{Linf}, \code{K}, \code{t0}, \code{LWalpha}, and \code{LWbeta} can be extracted from objects from appropriate model fitting and (ii) checks for impossible or improbable values for each parameter are performed; i.e.,
-}
-\examples{
-library(FSA)
-library(FSAdata)
-
-# ----- Simple examples with explicity arguments for each -------------------
-makeLH(N0=100,tmax=15,Linf=500,K=0.3,t0=-0.5,LWalpha=-5.613,LWbeta=3.1)
-makeLH(N0=100,tmax=15,Linf=500,K=0.3,t0=-0.5,LWalpha=-5.613,LWbeta=3.1,
-       restype="vector")
-
-# ----- Example of extracting values from model fits ------------------------
-# N0 and tmax provided as arguments ... Linf, K, and t0 extracted from nls
-#   output and LWalpha and LWbeta extracted from lm output. Note that nls
-#   and lm output here are just examples of the function, they should be
-#   calculated for the same species from the same waterbody, etc.
-
-## get some LVB results (as an example)
-data(SpotVA1,package="FSA")
-SpotVA1 <- SpotVA1 |>
-  dplyr::mutate(tl=tl*25.4)
-vb1 <- FSA::vbFuns()
-fit1 <- nls(tl~vb1(age,Linf,K,t0),data=SpotVA1,
-            start=FSA::vbStarts(tl~age,data=SpotVA1))
-
-## get some LW results (as an example)
-data(BluegillLM,package="FSAdata")
-BluegillLM <- BluegillLM |>
-  dplyr::mutate(logW=log10(wght),
-                logL=log10(tl))
-fit2 <- lm(logW~logL,data=BluegillLM)
-
-makeLH(N0=100,tmax=15,Linf=fit1,LWalpha=fit2)
-
-}
-\author{
-Derek Ogle
 
 \if{html}{\out{<div class="sourceCode R">}}\preformatted{# Best practice for entering life history parameter values
 LH <- makeLH(N0=100,tmax=15,Linf=600,K=0.30,t0=-0.6,
@@ -78,4 +49,47 @@ LH <- list(N0=100,tmax=15,Linf=600,K=0.30,t0=-0.6,
 }\if{html}{\out{</div>}}
 
 If a list is returned then values will be displayed with the number of decimals provided by the user. If a vector is returned then the number of decimals displayed will be the same for each value and will match the value supplied by the user with the most decimals. Thus, a list is preferred as it will be easier to match what was given to what was expected to be given.
+}
+\examples{
+library(FSA)
+library(FSAdata)
+library(dplyr)
+
+# ----- Simple examples with explicit arguments for each --------------------
+makeLH(N0=100,tmax=15,Linf=500,K=0.3,t0=-0.5,LWalpha=-5.613,LWbeta=3.1)
+makeLH(N0=100,tmax=15,Linf=500,K=0.3,t0=-0.5,LWalpha=-5.613,LWbeta=3.1,
+       restype="vector")
+
+# ----- Example of extracting values from model fits ------------------------
+# N0 and tmax provided as arguments ... Linf, K, and t0 extracted from nls
+#   output and LWalpha and LWbeta extracted from lm output. Note that nls
+#   and lm output here are just examples of the function, they should be
+#   calculated for the same species from the same waterbody, etc.
+
+# Load data from FSAdata package, restrict to one location and year,
+# create log10 values of weight and length
+data(WalleyeErie2,package="FSAdata")
+tmp <- WalleyeErie2 |>
+  dplyr::filter(loc==2,year==2010) |>
+  dplyr::mutate(logW=log10(w),
+                logL=log10(tl))
+
+# Generate LVB results
+vb1 <- FSA::makeGrowthFun(type="von Bertalanffy")
+fit1 <- nls(tl~vb1(age,Linf,K,t0),data=tmp,
+            start=FSA::findGrowthStarts(tl~age,data=tmp))
+
+# Generate length-weight regression results
+fit2 <- lm(logW~logL,data=tmp)
+
+# Make life-history list with those results
+waeLH <- makeLH(N0=100,tmax=15,Linf=fit1,LWalpha=fit2)
+waeLH
+
+}
+\seealso{
+This \href{https://fishr-core-team.github.io/rFAMS/articles/MakeLH.html}{demonstration page} for further examples.
+}
+\author{
+Derek Ogle
 }

@@ -1,82 +1,19 @@
-#' @title Simulate yield using the dynamic pool model.
+#' @title Simulate yield under minimum length regulations using the dynamic pool model.
 #'
-#' @description Estimate yield-at-age using the Beverton-Holt Yield-per-Recruit (YPR) model for a single year-class. This main function accepts  a minimum length limit for harvest (\code{minLL}), a vector for conditional fishing mortality (\code{cf}), a vector of conditional natural mortality (\code{cm}), a vector of recruitment abundance (\code{rec}), and life history parameters (\code{lhparams}).
+#' @description An INTERNAL function used by \code{\link{dpmBH_MinLL}} to estimate yield under minimum length limit regulations using the Dynamic Pool (DPM) model with a provided minimum length limit for harvest (`minLL`), vector for conditional fishing mortality (`cf`), vector of conditional natural mortality (`cm`), vector of recruitment abundance (`rec`). This is the base function for \code{\link{dpmBH_MinLL}}, is NOT exported, and is NOT expected to be used directly by the user.
 #'
-#' @param minLL A single numeric representing the minimum length limit for harvest in mm.
-#' @param cf A matrix of conditional fishing mortality where each row represents a year and each column represents age. Ages are age-0 through maximum age.
-#' @param cm A matrix of conditional natural mortality where each row represents a year and each column represents age. Ages are age-0 through maximum age.
-#' @param rec A single numeric representing initial recruitment abundance.
-#' @param lhparms A named vector or list that contains values for each `N0`, `tmax`, `Linf`, `K`, `t0`, `LWalpha`, and `LWbeta`. See \code{\link{makeLH}} for definitions of these life history parameters. Also see details.
-#' @param matchRicker A logical that indicates whether the yield function should match that in Ricker (). Defaults to \code{TRUE}. The only reason to changed to \code{FALSE} is to try to match output from FAMS. See the "YPR_FAMSvRICKER" article.
+#' @inheritParams dpmBH_MinLL
 #'
-#' @details Details will be filled out later
+#' @details See details in \code{\link{dpmBH_MinLL}}.
 #'
-#' @return A data.frame with the following calculated values:
-#' \itemize{
-#' \item \code{age} is the age of the year class
-#' \item \code{length} is the mean length at age calculated using the von Bertalanffy growth model and provided parameters
-#' \item \code{weight} is the mean weight at age calculated using the log10 length-weight regression using the provided parameters
-#' \item \code{N_start} is the number of individuals at age at the start of the year.
-#' \item \code{exploitation} is the exploitation rate.
-#' \item \code{expect_nat_death} is the expectation of natural death.
-#' \item \code{cf} is the conditional fishing mortality at age.
-#' \item \code{cm} is the conditional natural mortality at age
-#' \item \code{F} is the instantaneous rate of fishing mortality.
-#' \item \code{M} is the instantaneous rate of natural mortality.
-#' \item \code{Z} is the instantaneous rate of total mortality.
-#' \item \code{S} is the (total) annual rate of survival
-#' \item \code{tr} is the time for a fish to recruit to a minimum length limit (i.e., time to enter fishery).
-#' \item \code{Nt} is the number of fish at time tr (time they become harvestable size).
-#' \item \code{biomass} is the total biomass at age (g)
-#' \item \code{N_harvest} is the total number harvested at age
-#' \item \code{N_die} is the total number that die at age
-#' \item \code{yield} is the estimated yield (in g).
-#' }
-#'
-#' For convenience the data.frame also contains the model input values (\code{minLL}, \code{N0}, \code{N0}, \code{Linf}, \code{K}, \code{t0}, \code{LWalpha}, \code{LWbeta}, and \code{tmax}).
-#'
-#' The data.frame also contains a \code{notes} value which may contain abbreviations for "issues" that occurred when computing the results and were adjusted for. The possible abbreviates are as follows:
-#'
-#' \itemize{
-#' \item \code{minLL>=Linf}: The minimum length limit (minLL) being explored was greater than the given asymptotic mean length (Linf). For the purpose (only) of computing the time at recruitment to the fishery (tr) the Linf was set to minLL+0.1.
-#' \item \code{tr<t0}: The age at recruitment to the fishery (tr) was less than the hypothetical time when the mean length is zero (t0). The fish can't recruit to the fishery prior to having length 0 so tr was set to t0. This also assures that the time it takes to recruit to the fishery is greater than 0.
-# \item \code{Nt<0}: The number of fish recruiting to the fishery was less than 0. There cannot be negative fish, so Nt was then set to 0.
-# \item \code{Nt>N0}: The number of fish recruiting to the fishery was more than the number of fish recruited to the populations. Fish cannot be added to the cohort, so Nt was set to N0.
-#' \item \code{Y=Infinite}: The calculated yield (Y) was inifinity, which is impossible and suggests some other propblem. Yield was set to NA.
-#' \item \code{Y<0}: The calculated yield (Y) was negative, which is impossible. Yield was set to 0.
-#' \item \code{Nharv<0}: The calculated number of fish harvested (Nharv) was negative, which is not possible. Number harvested was set to 0.
-# #\item \code{Nharv>Nt}: The calculated number of fish harvested (Nharv) was greater than the number of fish recruiting to the fishery, which is impossible. The number harvested was set to the number recruiting to the fishery.
-#' \item \code{Ndie<0}: The calculated number of fish recruiting to the fishery that died naturally (Ndie) was negative, which is not possible. Number that died was set to 0.
-# #\item \code{Ndie>Nt}: The calculated number of fish recruiting to the fishery that died naturally (Ndie) was greater than the number of fish recruiting to the fishery, which is impossible. The number that died was set to the number recruiting to the fishery.
-#' \item \code{agvglen<minLL}: The average length of harvested fish was less than the given minimum length limit being explored, which is not possible (with only legal harvest). The average length was set to the minimum length limit.
-#' }
+#' @return A one row data.frame with the items described for the first data.frame returned by \code{\link{dpmBH_MinLL}}.
 #'
 #' @author Jason C. Doll, \email{jason.doll@fmarion.edu}
 #'
-#' @references
-#' Ricker, W.E. 1975. Computation and interpretation of biological statistics of fish populations. Technical Report Bulletin 191, Bulletin of the Fisheries Research Board of Canada. Was (is?) from \url{https://waves-vagues.dfo-mpo.gc.ca/library-bibliotheque/1485.pdf}.
-#'
-#' Slipke, J.W., and M.J. Maceina. 2014. Fishery analysis and modeling simulator. v1.64. American Fisheries Society, Bethesda, MD.
-#'
-#' @examples
-#' lhparms <- makeLH(N0=100,tmax=30,Linf=1349.5,K=0.111,t0=0.065,LWalpha=-5.2147,LWbeta=3.153)
-#'
-#' # simulate yield from a single year-class
-#' cm <- rep(0.18,(lhparms$tmax+1))
-#' cf <- c(rep(0,3), rep(0.33,(lhparms$tmax+1) - 3))
-#'
-#' Res_1 <- dpmBH_func(minLL=400,cm=cm,cf=cf,rec=1000,lhparms=lhparms,matchRicker=FALSE)
-#'
-#' Res_1
-#'
-#' @rdname dpmBH_func
-#' @export
+#' @keywords internal
 
-dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
-  # ---- Check inputs
-  #inputs checked in dpmBH() function
-
-  # Extract individual life history values
+dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker){
+  # ----- Extract individual life history values
   N0 <- rec
   tmax <- lhparms[["tmax"]]
   Linf <- lhparms[["Linf"]]
@@ -84,6 +21,14 @@ dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
   t0 <- lhparms[["t0"]]
   LWalpha <- lhparms[["LWalpha"]]
   LWbeta <- lhparms[["LWbeta"]]
+  # !!!!! Note that checks fof all inputs were made in dpmBH_MinLL()
+
+  # ----- Drop names from cf, cm, and rec vectors if they exist. This allows
+  #       those matrices in dpmBH_MinLL() to be named but eliminates those names
+  #       being inappropriately carried over to the results from here
+  if (!is.null(names(cf))) names(cf) <- NULL
+  if (!is.null(names(cm))) names(cm) <- NULL
+  if (!is.null(names(rec))) names(rec) <- NULL
 
   # prepare vectors for holding results
   notes <- NULL
@@ -133,10 +78,7 @@ dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
     F[x] <- -1*log(1-cf[x])
     M[x] <- -1*log(1-cm[x])
     Z[x] <- F[x]+M[x]
-    # print(F[x])
-    # print(M[x])
-    # print(cf[x])
-    # print(cm[x])
+
     # Annual survival rate (S)
     S[x] <- exp(-Z[x])
     # Exploitation rate (u) ... rearrange of FAMS equation 4:14
@@ -200,9 +142,7 @@ dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
       #Remove fish from natural mortality first then fishing
       removed_under <- abundvec[x]- (abundvec[x] * exp(-M[x] * r))
       remain_for_harvest <-(abundvec[x]-removed_under)
-      # N_harvest[x] <- remain_for_harvest - (remain_for_harvest *exp(-F[x]* (x-tr))) #1-r is simply number of years in the fishery
-      # remain_for_harvest <- remain_for_harvest-N_harvest[x]
-      # N_die[x]<- remain_for_harvest - (remain_for_harvest*exp(-M[x]*(x-tr))) + removed_under
+
       #Calculate remaining loss to harvest and natural deaths
       if(F[x] == 0){
         N_harvest[x] = 0
@@ -223,16 +163,6 @@ dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
       }
       N_die[x] <- (abundvec[x] - (abundvec[x]*exp(-Z[x]))) * (M[x]/Z[x])
     }
-
-    # if(x == (floor(tr)+1) && r > 0){
-    #   #When age at entering fishery is between x and x+1
-    #   N_harvest[x] <- (Nr - (Nr*exp(-Z[x]* (1-r)))) * (F[x]/Z[x]) #1-r is simply number of years in the fishery
-    #   N_die[x] <- (Nr - (Nr*exp(-Z[x]* (1-r)))) * (M[x]/Z[x])
-    # }else{
-    #   #When age at entering fishery is x
-    #   N_harvest[x] <- (Nr - (Nr*exp(-Z[x]* (1)))) * (F[x]/Z[x]) #1-r is simply number of years in the fishery
-    #   N_die[x] <- (Nr - (Nr*exp(-Z[x]* (1)))) * (M[x]/Z[x])
-    # }
 
   }
 
@@ -256,25 +186,13 @@ dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
     age[x] <- x-1
 }
 
-  #Calculate number of fish that reach harvestable size
-  #Nt = N0
-  # for(y in 1:(floor(tr))){
-  #   Nt = Nt *exp(-M[y])
-  # }
-  # Nt = Nt * exp(-M[floor(tr)] * r)
-  # Nt = N0 - Nt
-  #
-  # for(y in 1:((floor(tr))-1)){
-  #   Nt <- Nt - N_die[y] #Number of fish that reach harvestable size
-  # }
-  # Nt <- Nt - N_die[floor(tr)]
 
   # ---- Return data.frame with both output values and input parameters
   data.frame(
     age = age,
     length=length,
     weight=weight,
-    N_start=abundvec,
+    nstart=abundvec,
     exploitation=exploitation,
     expect_nat_death=expect_nat_death,
     cf=cf,
@@ -283,11 +201,9 @@ dpmBH_func <- function(minLL,cf,cm,rec,lhparms,matchRicker=FALSE){
     M = M,
     Z = Z,
     S=S,
-    #tr=rep(tr,length(age)),
-    #Nt=rep(Nt,length(age)),
     biomass= biomass,
-    N_harvest=N_harvest,
-    N_die=N_die,
+    nharvest=N_harvest,
+    ndie=N_die,
     yield=yield,
     minLL=minLL,
     N0=N0,

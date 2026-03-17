@@ -2,53 +2,80 @@
 % Please edit documentation in R/gen_recruitment.R
 \name{genRecruits}
 \alias{genRecruits}
-\title{Generate a vector of recruitment abundance for the dynamic pool model.}
+\alias{print.GENREC}
+\title{Generate a vector of number of recruits for the dynamic pool model.}
 \usage{
 genRecruits(
+  simyears,
   method = c("fixed", "uniform", "normal", "StrYC_Nth", "StrYC_randInt"),
-  simyears = 50,
-  Nrec = NULL,
-  MinR = NULL,
-  MaxR = NULL,
+  nR = NULL,
+  minR = NULL,
+  maxR = NULL,
   meanR = NULL,
   sdR = NULL,
-  Nthyr = NULL,
+  nStr = NULL,
   sizeStr = NULL,
   avgFreq = NULL
 )
+
+\method{print}{GENREC}(x, ...)
 }
 \arguments{
-\item{method}{A single string to call the method of generating a vector of recruits. \code{fixed} generate recruitment based on a fixed value for each year of simyears, \code{uniform} generates recruitment based on random values from a unifrom distribution for each year of simyears, \code{normal} generates recruitment based on random values from a unifrom distribution for each year of simyears, \code{StrYC_Nth} generates recruitment based on a strong year class every Nth year, and \code{StrYC_randInt} generates recruitment based on a strong year classes at random intervals.}
-
 \item{simyears}{A single numeric that sets the number of years to simulate recruitment}
 
-\item{Nrec}{A single numeric that sets the fixed number of recruitment}
+\item{method}{A single string to call the method of generating a vector of recruits. \code{fixed} generates recruitment based on a fixed value for each year of simyears, \code{uniform} generates recruitment based on random values from a uniform distribution for each year of simyears, \code{normal} generates recruitment based on random values from a normal distribution for each year of simyears, \code{StrYC_Nth} generates recruitment based on a strong year class every Nth year, and \code{StrYC_randInt} generates recruitment based on a strong year classes at random intervals.}
 
-\item{MinR}{A single numeric that sets the minimum recruitment abundance during simulations.}
+\item{nR}{A single numeric that sets the fixed number of recruitment. Used when \code{method="fixed"} or \code{method="StrYC_Nth"}.}
 
-\item{MaxR}{A single numeric that sets the maximum recruitment abundance during simulations.}
+\item{minR}{A single numeric that sets the minimum number of recruits during simulations. Used when \code{method="uniform"} or \code{method="normal"}.}
 
-\item{meanR}{A single numeric that sets the mean recruitment abundance.}
+\item{maxR}{A single numeric that sets the maximum number of recruits during simulations. Used when \code{method="uniform"} or \code{method="normal"}.}
 
-\item{sdR}{A single numeric that sets the standard deviation of recruitment abundance}
+\item{meanR}{A single numeric that sets the mean number of recruits. Used when \code{method="normal"} or \code{method="StrYC_randInt"}.}
 
-\item{Nthyr}{A single numeric that sets the Nth year that a strong year class will occur}
+\item{sdR}{A single numeric that sets the standard deviation of number of recruits. Used when \code{method="normal"}.}
 
-\item{sizeStr}{A single numeric that sets the multiplier for the strong year class relative to meanR}
+\item{nStr}{A single numeric that sets the Nth year that a strong year class will occur. Used when \code{method="StrYC_Nth"}.}
 
-\item{avgFreq}{A single numeric that sets the average frequency of a strong year class.}
+\item{sizeStr}{A single numeric that sets the multiplier for the strong year class relative to meanR. Used when \code{method="StrYC_Nth"}, or \code{method="StrYC_randInt"}.}
+
+\item{avgFreq}{A single numeric that sets the average frequency of a strong year class. Used when \code{method="StrYC_randInt"}.}
+
+\item{x}{Object saved from \code{genRecruits}.}
+
+\item{\dots}{Optional arguments for \code{print}.}
 }
 \value{
-A vector that contains the given recruitment options that can be used directly in the dynamic pool model (e.g., \code{\link{dpmBH}}).
+A vector that contains the number of recruits for each simulation that can be used directly in the dynamic pool model (e.g., \code{\link{dpmBH_MinLL}}).
 }
 \description{
-These function is used to generate recruitment abundances across multiple years using different random function.
-}
-\details{
-This function is used internally and not generally used interactively
+This function is used to generate number of recruits across multiple years using different random functions.
 }
 \examples{
-# To be filled out later
+# Generate recruits for 20 years based on a fixed number
+rec <- genRecruits(simyears=20,method="fixed",nR=50)
+rec
+
+# Generate recruits for 20 years from a uniform distribution bound
+# by 25 and 75
+rec <- genRecruits(simyears=20,method="uniform",minR=25,maxR=75)
+rec
+
+# Generate recruits for 20 years based on a normal distribution with a mean
+# of 50, standard deviation of 10, and trucated to be between 25 and 75
+rec <- genRecruits(simyears=20,method="normal",minR=25,maxR=75,meanR=50,sdR=10)
+rec
+
+# Geneate recruits for 20 years based on a fixed number of recruits at 50 and
+# a strong year class every 5 years with recruits 2 times the mean recruits
+rec <- genRecruits(simyears=20,method="StrYC_Nth",nR=50,sizeStr=2,nStr=5)
+rec
+
+# Generate recruits for 20 years based on a fixed number of recruits at 50
+# and a strong year class at random intervals of size 2 times the mean
+# recruitswith the random interval averaging every 5 years.
+rec <- genRecruits(simyears=20,method="StrYC_randInt",nR=50,sizeStr=2,avgFreq=5)
+rec
 
 }
 \author{
